@@ -50,50 +50,12 @@ impl<> Tokenizer<'_> {
                 ':' => Some(Token::new(TokenType::Colon, self.current_col)),
                 ',' => Some(Token::new(TokenType::Comma, self.current_col)),
                 '0'..='9' => {
-                    /* TODO: This handles only positive integers. Include support for fractions and
-                        exponents. Also, create a separate function, this is getting messy. */
                     self.token_start_col = self.current_col;
-                    if let Some(mut number) = ch.to_digit(10) {
-                        while let Some(next_char) = self.source.clone().next() {
-                            if let Some(digit) = next_char.to_digit(10) {
-                                number = number * 10 + digit;
-                                self.next_char();
-                            } else {
-                                return Some(Token::new(TokenType::Number(number), self.token_start_col));
-                            }
-                        }
-                        Some(Token::new(TokenType::Number(number),self.token_start_col));
-                    }
-                    None
+                    self.tokenize_number(ch)
                 },
                 '"' => {
-                    /* TODO: This should be a separate function. Also, improve handling of
-                        escape sequences. */
                     self.token_start_col = self.current_col;
-                    let mut string_val = String::new();
-                    let mut escape_seq_found = false;
-
-                    while let Some(next_char) = self.source.clone().next() {
-                        if next_char == '\\' {
-                            escape_seq_found = true;
-                        }
-
-                        if next_char != '"' {
-                            string_val.push(next_char);
-                            self.next_char();
-                        } else {
-                            if escape_seq_found {
-                                string_val.push(next_char);
-                                self.next_char();
-                                escape_seq_found = false;
-                            } else {
-                                Some(Token::new(TokenType::String(string_val.clone()), self.token_start_col));
-                                break;
-                            }
-                        }
-                    }
-                    self.next_char();
-                    Some(Token::new(TokenType::String(string_val.clone()), self.token_start_col))
+                    self.tokenize_string()
                 },
                 // TODO: Handle whitespaces and newlines
                 // TODO: Handle signed numbers (signs: none, +, -)
@@ -104,6 +66,51 @@ impl<> Tokenizer<'_> {
             }
         }
         None
+    }
+
+    fn tokenize_number(&mut self, first_digit: char) -> Option<Token> {
+        /* TODO: This handles only positive integers. Include support for fractions and
+            exponents. */
+        if let Some(mut number) = first_digit.to_digit(10) {
+            while let Some(next_char) = self.source.clone().next() {
+                if let Some(digit) = next_char.to_digit(10) {
+                    number = number * 10 + digit;
+                    self.next_char();
+                } else {
+                    return Some(Token::new(TokenType::Number(number), self.token_start_col));
+                }
+            }
+            Some(Token::new(TokenType::Number(number),self.token_start_col));
+        }
+        None
+    }
+
+    fn tokenize_string(&mut self) -> Option<Token> {
+        /* TODO: Improve handling of escape sequences. */
+        let mut string_val = String::new();
+        let mut escape_seq_found = false;
+
+        while let Some(next_char) = self.source.clone().next() {
+            if next_char == '\\' {
+                escape_seq_found = true;
+            }
+
+            if next_char != '"' {
+                string_val.push(next_char);
+                self.next_char();
+            } else {
+                if escape_seq_found {
+                    string_val.push(next_char);
+                    self.next_char();
+                    escape_seq_found = false;
+                } else {
+                    Some(Token::new(TokenType::String(string_val.clone()), self.token_start_col));
+                    break;
+                }
+            }
+        }
+        self.next_char();
+        Some(Token::new(TokenType::String(string_val.clone()), self.token_start_col))
     }
 }
 
