@@ -8,7 +8,7 @@ pub enum TokenType {
     Colon,
     Integer(String),
     Float(String),
-    String(String)
+    String(String),
 }
 
 #[derive(Debug, PartialEq)]

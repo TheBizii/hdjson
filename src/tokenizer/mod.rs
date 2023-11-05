@@ -3,21 +3,27 @@
 mod json_value;
 mod token;
 
-use std::str::Chars;
 pub use crate::tokenizer::token::Token;
 pub use crate::tokenizer::token::TokenType;
+use std::str::Chars;
 
 pub struct Tokenizer<'a> {
     source: Chars<'a>,
     current_col: i32,
     current_line: i32,
     token_start_col: i32,
-    current_char: Option<char>
+    current_char: Option<char>,
 }
 
-impl<> Tokenizer<'_> {
+impl Tokenizer<'_> {
     pub fn new(input: Chars) -> Tokenizer {
-        Tokenizer { source: input, current_col: 0, current_line: 1, token_start_col: 0, current_char: None }
+        Tokenizer {
+            source: input,
+            current_col: 0,
+            current_line: 1,
+            token_start_col: 0,
+            current_char: None,
+        }
     }
 
     pub fn tokenize(&mut self) -> Vec<Token> {
@@ -54,11 +60,11 @@ impl<> Tokenizer<'_> {
                 '0'..='9' => {
                     self.token_start_col = self.current_col;
                     self.tokenize_number(true)
-                },
+                }
                 '"' => {
                     self.token_start_col = self.current_col;
                     self.tokenize_string()
-                },
+                }
                 '-' => {
                     self.token_start_col = self.current_col;
                     if let Some(_next) = self.next_char() {
@@ -72,7 +78,7 @@ impl<> Tokenizer<'_> {
                     // TODO: Make some actually helpful errors.
                     None
                 }
-            }
+            };
         }
         None
     }
@@ -105,7 +111,6 @@ impl<> Tokenizer<'_> {
                     let char_count = decimal_part.chars().count();
                     for _ in 1..char_count {
                         self.next_char();
-
                     }
                     if !positive {
                         number = '-'.to_string() + number.as_str();
@@ -117,7 +122,7 @@ impl<> Tokenizer<'_> {
                                 Some(Token::new(TokenType::Float(number), self.token_start_col))
                             } else {
                                 Some(Token::new(TokenType::Integer(number), self.token_start_col))
-                            }
+                            };
                         }
 
                         // We encountered an exponent, get the decimal part and stitch them together.
@@ -133,22 +138,19 @@ impl<> Tokenizer<'_> {
                             let char_count = decimal_part.chars().count();
                             for _ in 1..char_count {
                                 self.next_char();
-
                             }
                             return if is_float {
                                 Some(Token::new(TokenType::Float(number), self.token_start_col))
                             } else {
                                 Some(Token::new(TokenType::Integer(number), self.token_start_col))
-                            }
+                            };
                         }
-
                     } else {
                         return None;
                     }
 
                     return Some(Token::new(TokenType::Float(number), self.token_start_col));
                 }
-
             } else {
                 return None;
             }
@@ -172,9 +174,7 @@ impl<> Tokenizer<'_> {
                 '0'..='9' => {
                     result.push(digit);
                 }
-                _ => {
-                    return Some(result)
-                }
+                _ => return Some(result),
             }
         }
 
@@ -218,10 +218,13 @@ impl<> Tokenizer<'_> {
         if let Some(next_char) = self.next_char() {
             // String values must end with a " quotation mark.
             return if next_char == '\"' {
-                Some(Token::new(TokenType::String(string_val.clone()), self.token_start_col))
+                Some(Token::new(
+                    TokenType::String(string_val.clone()),
+                    self.token_start_col,
+                ))
             } else {
                 None
-            }
+            };
         }
         None
     }
@@ -231,9 +234,7 @@ impl<> Tokenizer<'_> {
             let mut escape = String::from("\\");
             escape.push(next);
             return match next {
-                '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' => {
-                    Some(escape)
-                },
+                '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' => Some(escape),
                 'u' => {
                     for _ in 0..4 {
                         if let Some(seq_char) = self.next_char() {
@@ -246,12 +247,12 @@ impl<> Tokenizer<'_> {
                         }
                     }
                     Some(escape)
-                },
+                }
                 _ => {
                     // TODO: Error handling, illegal escape sequence.
                     None
                 }
-            }
+            };
         }
         None
     }
@@ -273,7 +274,7 @@ impl<> Tokenizer<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tokenizer::{Tokenizer, Token, TokenType};
+    use crate::tokenizer::{Token, TokenType, Tokenizer};
 
     #[test]
     fn simple_objects() {
@@ -288,8 +289,11 @@ mod tests {
             Token::new(TokenType::Comma, 21),
             Token::new(TokenType::String("description".to_string()), 22),
             Token::new(TokenType::Colon, 35),
-            Token::new(TokenType::String("This is kinda \\\"cool\\\"!".to_string()), 36),
-            Token::new(TokenType::ObjectEnd, 61)
+            Token::new(
+                TokenType::String("This is kinda \\\"cool\\\"!".to_string()),
+                36,
+            ),
+            Token::new(TokenType::ObjectEnd, 61),
         ];
         assert_eq!(tokens, expected_tokens);
     }
@@ -316,7 +320,7 @@ mod tests {
             Token::new(TokenType::String("allowed3".to_string()), 53),
             Token::new(TokenType::Colon, 63),
             Token::new(TokenType::String("\\\\".to_string()), 64),
-            Token::new(TokenType::ObjectEnd, 68)
+            Token::new(TokenType::ObjectEnd, 68),
         ];
         assert_eq!(tokens, expected_tokens);
     }
@@ -326,17 +330,23 @@ mod tests {
         let complete_string = r#""This string is completed and should be tokenized.""#;
         let mut lexer = Tokenizer::new(complete_string.chars());
         let tokens = lexer.tokenize();
-        let expected_tokens = vec![
-            Token::new(TokenType::String("This string is completed and should be tokenized.".to_string()), 1),
-        ];
+        let expected_tokens = vec![Token::new(
+            TokenType::String("This string is completed and should be tokenized.".to_string()),
+            1,
+        )];
         assert_eq!(tokens, expected_tokens);
 
-        let incomplete_string = r#""This string is missing a quotation mark at the end and should not be tokenized."#;
+        let incomplete_string =
+            r#""This string is missing a quotation mark at the end and should not be tokenized."#;
         let mut lexer = Tokenizer::new(incomplete_string.chars());
         let tokens = lexer.tokenize();
-        let expected_tokens = vec![
-            Token::new(TokenType::String("This string is missing a quotation mark at the end and should not be tokenized.}".to_string()), 1),
-        ];
+        let expected_tokens = vec![Token::new(
+            TokenType::String(
+                "This string is missing a quotation mark at the end and should not be tokenized.}"
+                    .to_string(),
+            ),
+            1,
+        )];
         assert_ne!(tokens, expected_tokens);
 
         let money_is_fire = r#"{"money": "💶=🔥"}"#;
@@ -347,7 +357,7 @@ mod tests {
             Token::new(TokenType::String("money".to_string()), 2),
             Token::new(TokenType::Colon, 9),
             Token::new(TokenType::String("💶=🔥".to_string()), 11),
-            Token::new(TokenType::ObjectEnd, 16)
+            Token::new(TokenType::ObjectEnd, 16),
         ];
         assert_eq!(tokens, expected_tokens);
 
@@ -360,7 +370,7 @@ mod tests {
             Token::new(TokenType::String("ctrlseq".to_string()), 2),
             Token::new(TokenType::Colon, 11),
             Token::new(TokenType::String("💶=🔥".to_string()), 13),
-            Token::new(TokenType::ObjectEnd, 16)
+            Token::new(TokenType::ObjectEnd, 16),
         ];
         assert_ne!(tokens, expected_tokens);
     }
