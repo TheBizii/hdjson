@@ -6,7 +6,8 @@ pub enum TokenType {
     ArrayEnd,
     Comma,
     Colon,
-    Number(u32),
+    Integer(String),
+    Float(String),
     String(String)
 }
 
